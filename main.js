@@ -5,6 +5,9 @@ const app = express()
 
 app.use(express.json());
 
+const replicate = new Replicate({
+    auth: process.env.REPLICATE_API_KEY,
+})
 app.post('/generate', async(req, res)=>{
     
 const {prompt} = req.body
@@ -13,9 +16,6 @@ if(!prompt){
     return res.status(400).json({error:"Prompt is required"});
 }
 
-const replicate = new Replicate({
-    auth: process.env.REPLICATE_API_KEY,
-})
 
 const input= {
     mask: "https://replicate.delivery/pbxt/HtGQBqO9MtVbPm0G0K43nsvvjBB0E0PaWOhuNRrRBBT4ttbf/mask.png",
@@ -36,6 +36,25 @@ const output = await replicate.run(
     res.json(output)
 })
 
+app.post('/chat', async (req, res) =>{
+    const {prompt} = req.body 
+    const input = {
+        top_k: 0,
+        top_p: 0.9,
+        prompt: prompt,
+        temperature: 0.6,
+        length_penalty: 1,
+        max_new_tokens: 128,
+        prompt_template: "{prompt}",
+        presence_penalty: 1.15
+      };
+      
+      for await (const event of replicate.stream("meta/meta-llama-3-8b", { input })) {
+        // process.stdout.write(event.toString());
+        res.write(event.toString())
+      };
+res.end()
+})
 
 console.log('hello world')
 
